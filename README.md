@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CourtWork 🏀
+
+A lightweight, mobile-first web app for basketball trainers to build custom homework playlists with drag-and-drop video clips and assign them to clients.
+
+## Tech Stack
+
+| Service | Purpose |
+|---------|---------|
+| **Next.js 16** | App Router, Server Components, API routes |
+| **Supabase** | Auth, Postgres database, video storage, RLS |
+| **Vercel** | Hosting & deployment |
+| **Stripe** | Pro subscription billing ($29/mo) |
+| **PostHog** | Product analytics |
+| **Resend** | Homework assignment email notifications |
+
+## Features
+
+- **Clip Library** — Upload training drill videos to Supabase Storage
+- **Drag & Drop Playlists** — Build ordered homework sequences with touch-friendly reordering
+- **Client Management** — Link athletes to your trainer account
+- **Homework Assignments** — Send playlists with due dates and notes
+- **Progress Tracking** — Clients mark drills complete; trainers see status
+- **Email Notifications** — Clients receive homework links via Resend
+- **Stripe Billing** — Pro plan for unlimited usage
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone & install
+
+```bash
+cd courtwork
+npm install
+cp .env.example .env.local
+```
+
+### 2. Set up Supabase
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run the migration in `supabase/migrations/001_initial_schema.sql` via the SQL editor
+3. Create a Storage bucket named `clips` (private)
+4. Apply the storage policies from the bottom of the migration file
+5. Copy your project URL and keys to `.env.local`
+
+### 3. Set up Stripe
+
+1. Create a product "CourtWork Pro" at $29/month in [Stripe Dashboard](https://dashboard.stripe.com)
+2. Copy the Price ID to `STRIPE_PRO_PRICE_ID`
+3. Set up a webhook endpoint pointing to `/api/stripe/webhook` for:
+   - `checkout.session.completed`
+   - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+
+### 4. Set up PostHog & Resend (optional)
+
+- PostHog: Create a project and add `NEXT_PUBLIC_POSTHOG_KEY`
+- Resend: Verify your domain and add `RESEND_API_KEY`
+
+### 5. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx vercel
+```
 
-## Learn More
+Add all environment variables from `.env.example` in the Vercel dashboard.
 
-To learn more about Next.js, take a look at the following resources:
+## User Roles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Role | Access |
+|------|--------|
+| **Trainer** | Upload clips, build playlists, manage clients, assign homework |
+| **Client** | View assigned homework, watch videos, mark drills complete |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Sign up and select your role on the registration page.
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/
+│   ├── (app)/          # Authenticated routes with bottom nav
+│   │   ├── dashboard/  # Trainer home
+│   │   ├── clips/      # Video library
+│   │   ├── playlists/  # Drag-drop playlist builder
+│   │   ├── clients/    # Client roster
+│   │   ├── assignments/# Homework management
+│   │   ├── homework/   # Client homework view
+│   │   └── settings/   # Account & billing
+│   ├── (auth)/         # Login & signup
+│   └── api/            # Stripe webhooks, assignments
+├── components/
+│   ├── playlists/      # DnD playlist builder
+│   ├── layout/         # Mobile nav, headers
+│   └── ui/             # Button, Card, Input, etc.
+├── lib/                # Supabase, Stripe, Resend, auth helpers
+└── types/              # TypeScript interfaces
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT

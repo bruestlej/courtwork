@@ -1,64 +1,121 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Video,
+  ListMusic,
+  Send,
+  BarChart3,
+  Smartphone,
+} from "lucide-react";
 
-export default function Home() {
+const features = [
+  {
+    icon: Video,
+    title: "Clip Library",
+    description: "Upload and organize training drill videos",
+  },
+  {
+    icon: ListMusic,
+    title: "Drag & Drop Playlists",
+    description: "Build custom homework sequences in seconds",
+  },
+  {
+    icon: Send,
+    title: "Assign to Clients",
+    description: "Send homework with due dates and notes",
+  },
+  {
+    icon: BarChart3,
+    title: "Track Progress",
+    description: "See which drills your athletes complete",
+  },
+  {
+    icon: Smartphone,
+    title: "Mobile First",
+    description: "Built for the court — works on any phone",
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-stone-50">
+      <header className="border-b border-stone-200 bg-white">
+        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🏀</span>
+            <span className="font-bold text-stone-900">CourtWork</span>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-lg px-4">
+        <section className="py-12 text-center">
+          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 sm:text-4xl">
+            Homework playlists for{" "}
+            <span className="text-orange-600">basketball trainers</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-4 text-base text-stone-600">
+            Drag-and-drop video clips into custom workout playlists. Assign
+            homework to your clients and track their progress — all from your
+            phone.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link href="/signup">
+              <Button size="lg" className="w-full sm:w-auto">
+                Start Free Trial
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        <section className="space-y-3 pb-16">
+          {features.map(({ icon: Icon, title, description }) => (
+            <div
+              key={title}
+              className="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white p-4"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100">
+                <Icon className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-stone-900">{title}</h3>
+                <p className="text-sm text-stone-500">{description}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="mb-16 rounded-2xl bg-orange-600 p-6 text-center text-white">
+          <h2 className="text-xl font-bold">Pro Plan — $29/mo</h2>
+          <p className="mt-2 text-sm text-orange-100">
+            Unlimited clients, clips, and playlists. Email notifications
+            included.
+          </p>
+          <Link href="/signup" className="mt-4 inline-block">
+            <Button
+              variant="secondary"
+              size="lg"
+              className="bg-white text-orange-600 hover:bg-orange-50"
+            >
+              Get Started
+            </Button>
+          </Link>
+        </section>
       </main>
     </div>
   );
