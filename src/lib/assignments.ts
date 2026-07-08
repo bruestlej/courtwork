@@ -8,11 +8,11 @@ function getSupabaseAdmin() {
   );
 }
 
-export type AssignmentWithClient = Assignment & {
+export type AssignmentWithClient = Omit<Assignment, "client" | "playlist"> & {
   client: Pick<Profile, "full_name" | "email"> | null;
 };
 
-export type AssignmentWithTrainer = Assignment & {
+export type AssignmentWithTrainer = Omit<Assignment, "client" | "playlist"> & {
   trainer: Pick<Profile, "full_name"> | null;
   playlist: { title: string } | null;
 };
