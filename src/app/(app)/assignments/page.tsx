@@ -1,30 +1,22 @@
 import Link from "next/link";
 import { requireTrainer } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getTrainerAssignments } from "@/lib/assignments";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, ClipboardList } from "lucide-react";
-import { formatDate, unwrapJoin } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default async function AssignmentsPage() {
   const profile = await requireTrainer();
-  const supabase = await createClient();
-
-  const { data: assignments } = await supabase
-    .from("assignments")
-    .select(
-      "*, client:profiles!assignments_client_id_fkey(full_name, email)"
-    )
-    .eq("trainer_id", profile.id)
-    .order("created_at", { ascending: false });
+  const assignments = await getTrainerAssignments(profile.id);
 
   return (
     <>
       <PageHeader
         title="Homework"
-        subtitle={`${assignments?.length ?? 0} assignments`}
+        subtitle={`${assignments.length} assignments`}
         action={
           <Link href="/assignments/new">
             <Button size="sm">
@@ -34,10 +26,10 @@ export default async function AssignmentsPage() {
         }
       />
       <div className="mx-auto max-w-lg px-4 py-4">
-        {assignments && assignments.length > 0 ? (
+        {assignments.length > 0 ? (
           <div className="space-y-2">
             {assignments.map((a) => {
-              const client = unwrapJoin(a.client);
+              const client = a.client;
               return (
                 <Card key={a.id}>
                   <div className="flex items-start justify-between gap-2">

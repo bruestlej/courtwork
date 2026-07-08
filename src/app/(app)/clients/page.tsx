@@ -1,27 +1,20 @@
 import Link from "next/link";
 import { requireTrainer } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getTrainerClientLinks } from "@/lib/clients";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Plus, Users } from "lucide-react";
-import { unwrapJoin } from "@/lib/utils";
 
 export default async function ClientsPage() {
   const profile = await requireTrainer();
-  const supabase = await createClient();
-
-  const { data: links } = await supabase
-    .from("trainer_clients")
-    .select("*, client:profiles!trainer_clients_client_id_fkey(*)")
-    .eq("trainer_id", profile.id)
-    .order("created_at", { ascending: false });
+  const links = await getTrainerClientLinks(profile.id);
 
   return (
     <>
       <PageHeader
         title="Clients"
-        subtitle={`${links?.length ?? 0} athletes`}
+        subtitle={`${links.length} athletes`}
         action={
           <Link href="/clients/add">
             <Button size="sm">
@@ -31,10 +24,10 @@ export default async function ClientsPage() {
         }
       />
       <div className="mx-auto max-w-lg px-4 py-4">
-        {links && links.length > 0 ? (
+        {links.length > 0 ? (
           <div className="space-y-2">
             {links.map((link) => {
-              const client = unwrapJoin(link.client);
+              const client = link.client;
               return (
                 <Card key={link.id} className="flex items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-200 text-sm font-bold text-stone-600">

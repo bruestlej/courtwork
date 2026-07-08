@@ -1,33 +1,35 @@
 import Link from "next/link";
 import { requireTrainer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { countTrainerClients } from "@/lib/clients";
+import { getTrainerAssignments } from "@/lib/assignments";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Video, ListMusic, Users, ClipboardList } from "lucide-react";
-import { unwrapJoin } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const profile = await requireTrainer();
   const supabase = await createClient();
 
-  const [clips, playlists, clients, assignments] = await Promise.all([
-    supabase.from("clips").select("id", { count: "exact", head: true }),
-    supabase.from("playlists").select("id", { count: "exact", head: true }),
-    supabase.from("trainer_clients").select("id", { count: "exact", head: true }),
+  const [clips, playlists, clientCount, assignments] = await Promise.all([
     supabase
-      .from("assignments")
-      .select("id, title, status, client:profiles!assignments_client_id_fkey(full_name)")
-      .eq("trainer_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(5),
+      .from("clips")
+      .select("id", { count: "exact", head: true })
+      .eq("trainer_id", profile.id),
+    supabase
+      .from("playlists")
+      .select("id", { count: "exact", head: true })
+      .eq("trainer_id", profile.id),
+    countTrainerClients(profile.id),
+    getTrainerAssignments(profile.id, 5),
   ]);
 
   const stats = [
     { label: "Clips", count: clips.count ?? 0, href: "/clips", icon: Video },
     { label: "Playlists", count: playlists.count ?? 0, href: "/playlists", icon: ListMusic },
-    { label: "Clients", count: clients.count ?? 0, href: "/clients", icon: Users },
+    { label: "Clients", count: clientCount, href: "/clients", icon: Users },
   ];
 
   return (
@@ -76,14 +78,14 @@ export default async function DashboardPage() {
               View all
             </Link>
           </div>
-          {assignments.data && assignments.data.length > 0 ? (
+          {assignments.length > 0 ? (
             <div className="space-y-2">
-              {assignments.data.map((a) => (
+              {assignments.map((a) => (
                 <Card key={a.id} className="flex items-center justify-between">
                   <div className="min-w-0">
                     <CardTitle className="truncate text-sm">{a.title}</CardTitle>
                     <CardDescription>
-                      {unwrapJoin(a.client)?.full_name || "Client"}
+                      {a.client?.full_name || a.client?.email || "Client"}
                     </CardDescription>
                   </div>
                   <Badge

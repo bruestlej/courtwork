@@ -10,6 +10,22 @@ function getSupabaseAdmin() {
   );
 }
 
+async function setStatusByUserId(userId: string, status: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  await supabaseAdmin
+    .from("profiles")
+    .update({ subscription_status: status })
+    .eq("id", userId);
+}
+
+async function setStatusByCustomerId(customerId: string, status: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  await supabaseAdmin
+    .from("profiles")
+    .update({ subscription_status: status })
+    .eq("stripe_customer_id", customerId);
+}
+
 export async function POST(request: Request) {
   const body = await request.text();
   const signature = (await headers()).get("stripe-signature");
@@ -25,42 +41,65 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch {
+  } catch (err) {
+    console.error("Stripe webhook signature error:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const userId = session.metadata?.supabase_user_id;
+        const customerId =
+          typeof session.customer === "string"
+            ? session.customer
+            : session.customer?.id;
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      const userId = session.metadata?.supabase_user_id;
-      if (userId) {
-        await supabaseAdmin
-          .from("profiles")
-          .update({ subscription_status: "active" })
-          .eq("id", userId);
+        if (userId) {
+          const updates: {
+            subscription_status: string;
+            stripe_customer_id?: string;
+          } = { subscription_status: "active" };
+          if (customerId) updates.stripe_customer_id = customerId;
+
+          await getSupabaseAdmin()
+            .from("profiles")
+            .update(updates)
+            .eq("id", userId);
+        } else if (customerId) {
+          await setStatusByCustomerId(customerId, "active");
+        }
+        break;
       }
-      break;
+      case "customer.subscription.updated": {
+        const subscription = event.data.object;
+        const customerId = subscription.customer as string;
+        const status =
+          subscription.status === "active"
+            ? "active"
+            : subscription.status === "past_due"
+              ? "past_due"
+              : "canceled";
+        await setStatusByCustomerId(customerId, status);
+        break;
+      }
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object;
+        const customerId = subscription.customer as string;
+        await setStatusByCustomerId(customerId, "canceled");
+        break;
+      }
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const customerId = invoice.customer as string;
+        if (customerId) await setStatusByCustomerId(customerId, "past_due");
+        break;
+      }
     }
-    case "customer.subscription.deleted": {
-      const subscription = event.data.object;
-      const customerId = subscription.customer as string;
-      await supabaseAdmin
-        .from("profiles")
-        .update({ subscription_status: "canceled" })
-        .eq("stripe_customer_id", customerId);
-      break;
-    }
-    case "invoice.payment_failed": {
-      const invoice = event.data.object;
-      const customerId = invoice.customer as string;
-      await supabaseAdmin
-        .from("profiles")
-        .update({ subscription_status: "past_due" })
-        .eq("stripe_customer_id", customerId);
-      break;
-    }
+  } catch (err) {
+    console.error("Stripe webhook handler error:", err);
+    return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

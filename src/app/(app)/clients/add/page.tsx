@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -22,45 +21,24 @@ export default function AddClientPage() {
     setError("");
     setSuccess("");
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: client, error: findError } = await supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .eq("email", email.toLowerCase().trim())
-      .eq("role", "client")
-      .single();
-
-    if (findError || !client) {
-      setError(
-        "Client not found. They need to sign up as a client first."
-      );
-      setLoading(false);
-      return;
-    }
-
-    const { error: linkError } = await supabase.from("trainer_clients").insert({
-      trainer_id: user.id,
-      client_id: client.id,
+    const res = await fetch("/api/clients/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
 
-    if (linkError) {
-      if (linkError.code === "23505") {
-        setError("This client is already on your roster");
-      } else {
-        setError(linkError.message);
-      }
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Failed to add client");
       setLoading(false);
       return;
     }
 
-    setSuccess(`Added ${client.full_name || client.email}`);
+    setSuccess(`Added ${data.client.full_name || data.client.email}`);
     setEmail("");
     setLoading(false);
+    router.push("/clients");
     router.refresh();
   }
 
@@ -71,7 +49,8 @@ export default function AddClientPage() {
         <Card className="mb-4 bg-orange-50 border-orange-200">
           <p className="text-sm text-orange-800">
             Your client must create an account with the &quot;client&quot; role
-            first. Then enter their email here to link them.
+            first. Then enter their email here to link them. Use your trainer
+            browser for this step — not the client (incognito) session.
           </p>
         </Card>
         <form onSubmit={handleAdd} className="space-y-4">

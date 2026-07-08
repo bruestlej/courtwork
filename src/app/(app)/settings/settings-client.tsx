@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,52 @@ import { PLANS } from "@/lib/stripe";
 
 export default function SettingsPage({ profile }: { profile: Profile }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(
+    profile.subscription_status
+  );
+  const [syncMessage, setSyncMessage] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("upgraded") !== "true") return;
+
+    let cancelled = false;
+
+    async function syncAfterUpgrade() {
+      setSyncing(true);
+      setSyncMessage("Confirming your Pro subscription…");
+
+      try {
+        const res = await fetch("/api/stripe/sync", { method: "POST" });
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data.status === "active") {
+          setSubscriptionStatus("active");
+          setSyncMessage("Pro plan is now active.");
+        } else {
+          setSyncMessage(
+            "Payment received, but Pro status isn’t active yet. Wait a few seconds and refresh, or ensure stripe listen is running."
+          );
+        }
+        router.replace("/settings");
+        router.refresh();
+      } catch {
+        if (!cancelled) {
+          setSyncMessage("Could not confirm subscription. Try refreshing.");
+        }
+      } finally {
+        if (!cancelled) setSyncing(false);
+      }
+    }
+
+    syncAfterUpgrade();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, router]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -26,8 +71,33 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
     setLoading(true);
     const res = await fetch("/api/stripe/checkout", { method: "POST" });
     const data = await res.json();
-    if (data.url) window.location.href = data.url;
+    if (data.url) {
+      window.location.href = data.url;
+      return;
+    }
+    setSyncMessage(data.error || "Checkout failed");
     setLoading(false);
+  }
+
+  async function handleRefreshStatus() {
+    setSyncing(true);
+    setSyncMessage("");
+    try {
+      const res = await fetch("/api/stripe/sync", { method: "POST" });
+      const data = await res.json();
+      if (data.status === "active") {
+        setSubscriptionStatus("active");
+        setSyncMessage("Pro plan is now active.");
+      } else {
+        setSubscriptionStatus(data.status || "free");
+        setSyncMessage("Still on Free — no active Stripe subscription found.");
+      }
+      router.refresh();
+    } catch {
+      setSyncMessage("Could not refresh status.");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   return (
@@ -49,11 +119,14 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
           <Card>
             <CardTitle className="text-sm">Subscription</CardTitle>
             <CardDescription className="mt-1">
-              {profile.subscription_status === "active"
+              {subscriptionStatus === "active"
                 ? "Pro plan active"
                 : "Free plan"}
             </CardDescription>
-            {profile.subscription_status !== "active" && (
+            {syncMessage && (
+              <p className="mt-2 text-xs text-stone-600">{syncMessage}</p>
+            )}
+            {subscriptionStatus !== "active" && (
               <>
                 <ul className="mt-3 space-y-1">
                   {PLANS.pro.features.map((f) => (
@@ -65,7 +138,7 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
                 <Button
                   className="mt-3 w-full"
                   onClick={handleUpgrade}
-                  disabled={loading}
+                  disabled={loading || syncing}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -77,6 +150,20 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
                 </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              className="mt-2 w-full"
+              onClick={handleRefreshStatus}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+                </>
+              ) : (
+                "Refresh subscription status"
+              )}
+            </Button>
           </Card>
         )}
 

@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAssignment } from "@/lib/assignments";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { sendHomeworkEmail } from "@/lib/resend";
 import { formatDate } from "@/lib/utils";
+
+function getSupabaseAdmin() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,26 +25,41 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { playlist_id, client_id, title, message, due_date } = body;
 
-  const { data: assignment, error } = await supabase
-    .from("assignments")
-    .insert({
-      playlist_id,
-      client_id,
-      trainer_id: user.id,
-      title,
-      message,
-      due_date,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!playlist_id || !client_id || !title) {
+    return NextResponse.json(
+      { error: "Playlist, client, and title are required" },
+      { status: 400 }
+    );
   }
 
+  const { data: assignment, error } = await createAssignment({
+    trainerId: user.id,
+    playlistId: playlist_id,
+    clientId: client_id,
+    title,
+    message,
+    dueDate: due_date,
+  });
+
+  if (error || !assignment) {
+    return NextResponse.json(
+      { error: error || "Failed to assign homework" },
+      { status: 400 }
+    );
+  }
+
+  const admin = getSupabaseAdmin();
   const [{ data: client }, { data: trainer }] = await Promise.all([
-    supabase.from("profiles").select("email, full_name").eq("id", client_id).single(),
-    supabase.from("profiles").select("full_name").eq("id", user.id).single(),
+    admin
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", client_id)
+      .single(),
+    admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single(),
   ]);
 
   if (client?.email && process.env.RESEND_API_KEY) {

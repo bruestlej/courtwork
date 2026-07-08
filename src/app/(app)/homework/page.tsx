@@ -1,23 +1,15 @@
 import Link from "next/link";
 import { requireClient } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getClientAssignments } from "@/lib/assignments";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClipboardList } from "lucide-react";
-import { formatDate, unwrapJoin } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default async function HomeworkPage() {
   const profile = await requireClient();
-  const supabase = await createClient();
-
-  const { data: assignments } = await supabase
-    .from("assignments")
-    .select(
-      "*, trainer:profiles!assignments_trainer_id_fkey(full_name), playlist:playlists(title)"
-    )
-    .eq("client_id", profile.id)
-    .order("created_at", { ascending: false });
+  const assignments = await getClientAssignments(profile.id);
 
   return (
     <>
@@ -26,11 +18,11 @@ export default async function HomeworkPage() {
         subtitle={`Hey ${profile.full_name?.split(" ")[0] || "there"}!`}
       />
       <div className="mx-auto max-w-lg px-4 py-4">
-        {assignments && assignments.length > 0 ? (
+        {assignments.length > 0 ? (
           <div className="space-y-2">
             {assignments.map((a) => {
-              const trainer = unwrapJoin(a.trainer);
-              const playlist = unwrapJoin(a.playlist);
+              const trainer = a.trainer;
+              const playlist = a.playlist;
               return (
                 <Link key={a.id} href={`/homework/${a.id}`}>
                   <Card className="transition-shadow hover:shadow-md">
