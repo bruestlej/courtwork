@@ -15,28 +15,64 @@ export default function SignupPage() {
   const [role, setRole] = useState<"trainer" | "client">("trainer");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setNeedsConfirmation(false);
 
+    const normalizedEmail = email.trim().toLowerCase();
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: { full_name: fullName.trim(), role },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    // If email confirmation is required, Supabase may return a user with no session
+    if (!data.session) {
+      setNeedsConfirmation(true);
       setLoading(false);
       return;
     }
 
     window.location.href = role === "client" ? "/homework" : "/dashboard";
+  }
+
+  if (needsConfirmation) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-stone-50 px-4 py-8">
+        <Card className="w-full max-w-sm space-y-3 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-xl">
+            ✉️
+          </div>
+          <h1 className="text-xl font-bold text-stone-900">Check your email</h1>
+          <p className="text-sm text-stone-600">
+            We sent a confirmation link to{" "}
+            <span className="font-medium text-stone-900">{email.trim()}</span>.
+            Open it to activate your account, then sign in.
+          </p>
+          <p className="text-xs text-stone-500">
+            Didn&apos;t get it? Check spam, or wait a minute and try signing up
+            again.
+          </p>
+          <Link href="/login">
+            <Button className="mt-2 w-full">Go to Sign In</Button>
+          </Link>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -89,6 +125,7 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
+              autoComplete="email"
               required
             />
           </div>
@@ -101,6 +138,7 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Min 6 characters"
               minLength={6}
+              autoComplete="new-password"
               required
             />
           </div>

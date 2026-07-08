@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAssignment } from "@/lib/assignments";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { sendHomeworkEmail } from "@/lib/resend";
 import { formatDate } from "@/lib/utils";
-
-function getSupabaseAdmin() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -20,6 +12,19 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: trainer } = await supabase
+    .from("profiles")
+    .select("role, full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!trainer || trainer.role !== "trainer") {
+    return NextResponse.json(
+      { error: "Only trainers can assign homework" },
+      { status: 403 }
+    );
   }
 
   const body = await request.json();
@@ -48,19 +53,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const admin = getSupabaseAdmin();
-  const [{ data: client }, { data: trainer }] = await Promise.all([
-    admin
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", client_id)
-      .single(),
-    admin
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single(),
-  ]);
+  const { data: client } = await supabase
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", client_id)
+    .single();
 
   if (client?.email && process.env.RESEND_API_KEY) {
     try {
@@ -68,7 +65,7 @@ export async function POST(request: Request) {
       await sendHomeworkEmail({
         to: client.email,
         clientName: client.full_name || "Athlete",
-        trainerName: trainer?.full_name || "Your trainer",
+        trainerName: trainer.full_name || "Your trainer",
         assignmentTitle: title,
         dueDate: due_date ? formatDate(due_date) : undefined,
         homeworkUrl: `${baseUrl}/homework/${assignment.id}`,

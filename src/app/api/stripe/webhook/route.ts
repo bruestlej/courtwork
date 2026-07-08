@@ -1,26 +1,24 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getStripe } from "@/lib/stripe";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+async function setStatusByUserId(
+  userId: string,
+  status: string,
+  customerId?: string
+) {
+  const updates: {
+    subscription_status: string;
+    stripe_customer_id?: string;
+  } = { subscription_status: status };
+  if (customerId) updates.stripe_customer_id = customerId;
 
-async function setStatusByUserId(userId: string, status: string) {
-  const supabaseAdmin = getSupabaseAdmin();
-  await supabaseAdmin
-    .from("profiles")
-    .update({ subscription_status: status })
-    .eq("id", userId);
+  await getSupabaseAdmin().from("profiles").update(updates).eq("id", userId);
 }
 
 async function setStatusByCustomerId(customerId: string, status: string) {
-  const supabaseAdmin = getSupabaseAdmin();
-  await supabaseAdmin
+  await getSupabaseAdmin()
     .from("profiles")
     .update({ subscription_status: status })
     .eq("stripe_customer_id", customerId);
@@ -57,16 +55,7 @@ export async function POST(request: Request) {
             : session.customer?.id;
 
         if (userId) {
-          const updates: {
-            subscription_status: string;
-            stripe_customer_id?: string;
-          } = { subscription_status: "active" };
-          if (customerId) updates.stripe_customer_id = customerId;
-
-          await getSupabaseAdmin()
-            .from("profiles")
-            .update(updates)
-            .eq("id", userId);
+          await setStatusByUserId(userId, "active", customerId);
         } else if (customerId) {
           await setStatusByCustomerId(customerId, "active");
         }

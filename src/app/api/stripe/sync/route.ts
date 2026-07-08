@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
-
-function getSupabaseAdmin() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 /** After Checkout success, confirm subscription with Stripe and update profile. */
 export async function POST() {
@@ -30,10 +23,8 @@ export async function POST() {
 
   let customerId = profile?.stripe_customer_id;
 
-  // Fallback: find Stripe customer by metadata or email
   if (!customerId) {
-    const stripe = getStripe();
-    const customers = await stripe.customers.list({
+    const customers = await getStripe().customers.list({
       email: user.email,
       limit: 5,
     });

@@ -1,14 +1,7 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStripe, PLANS } from "@/lib/stripe";
-
-function getSupabaseAdmin() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { NextResponse } from "next/server";
 
 export async function POST() {
   const supabase = await createClient();
@@ -27,8 +20,7 @@ export async function POST() {
     );
   }
 
-  const admin = getSupabaseAdmin();
-  const { data: profile } = await admin
+  const { data: profile } = await supabase
     .from("profiles")
     .select("stripe_customer_id, email, role")
     .eq("id", user.id)
@@ -41,6 +33,8 @@ export async function POST() {
     );
   }
 
+  // Billing fields are protected by trigger; use admin for customer id writes
+  const admin = getSupabaseAdmin();
   let customerId = profile?.stripe_customer_id;
 
   if (!customerId) {
