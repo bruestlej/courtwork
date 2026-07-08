@@ -39,7 +39,7 @@ export function BottomNav({ role }: { role: "trainer" | "client" }) {
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors",
+                "flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors touch-manipulation",
                 active
                   ? "text-orange-600"
                   : "text-stone-400 hover:text-stone-600"

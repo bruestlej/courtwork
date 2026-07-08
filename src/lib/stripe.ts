@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { PLAN_COPY } from "@/lib/plans";
 
 let stripeClient: Stripe | null = null;
 
@@ -12,16 +13,11 @@ export function getStripe() {
 }
 
 export const PLANS = {
+  free: PLAN_COPY.free,
   pro: {
     name: "Pro",
     price: 2900,
     priceId: process.env.STRIPE_PRO_PRICE_ID || "",
-    features: [
-      "Unlimited clients",
-      "Unlimited clips & playlists",
-      "Homework assignments",
-      "Email notifications",
-      "Progress tracking",
-    ],
+    features: [...PLAN_COPY.pro.features],
   },
 } as const;

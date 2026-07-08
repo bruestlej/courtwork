@@ -13,12 +13,13 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/95 backdrop-blur-lg">
+    <header className="safe-area-top sticky top-0 z-40 border-b border-stone-200 bg-white/95 backdrop-blur-lg">
       <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
         {backHref && (
           <Link
             href={backHref}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl hover:bg-stone-100"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl hover:bg-stone-100 active:bg-stone-200"
+            aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>

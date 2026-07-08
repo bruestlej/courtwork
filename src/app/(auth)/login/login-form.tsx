@@ -17,7 +17,14 @@ export default function LoginPage() {
 
   const banner = useMemo(() => {
     const confirmed = searchParams.get("confirmed");
+    const reset = searchParams.get("reset");
     const authError = searchParams.get("error");
+    if (reset === "1") {
+      return {
+        tone: "green" as const,
+        text: "Password updated. Sign in with your new password.",
+      };
+    }
     if (confirmed === "1") {
       return {
         tone: "green" as const,
@@ -115,6 +122,14 @@ export default function LoginPage() {
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="text-right">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-orange-600"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </Button>

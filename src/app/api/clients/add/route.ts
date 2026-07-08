@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { canAddResource } from "@/lib/plans";
+import { getTrainerUsage } from "@/lib/usage";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
 
   const { data: trainer } = await supabase
     .from("profiles")
-    .select("id, role")
+    .select("id, role, subscription_status")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -22,6 +24,12 @@ export async function POST(request: Request) {
       { error: "Only trainers can add clients" },
       { status: 403 }
     );
+  }
+
+  const usage = await getTrainerUsage(user.id, trainer.subscription_status);
+  const gate = canAddResource("clients", usage.clients, trainer);
+  if (!gate.allowed) {
+    return NextResponse.json({ error: gate.message, upgrade: true }, { status: 403 });
   }
 
   const body = await request.json();

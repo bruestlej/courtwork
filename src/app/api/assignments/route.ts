@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAssignment } from "@/lib/assignments";
 import { sendHomeworkEmail } from "@/lib/resend";
 import { formatDate } from "@/lib/utils";
+import { isProActive } from "@/lib/plans";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
 
   const { data: trainer } = await supabase
     .from("profiles")
-    .select("role, full_name")
+    .select("role, full_name, subscription_status")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -53,27 +54,50 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: client } = await supabase
-    .from("profiles")
-    .select("email, full_name")
-    .eq("id", client_id)
-    .single();
+  let emailSent = false;
+  let emailError: string | null = null;
 
-  if (client?.email && process.env.RESEND_API_KEY) {
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      await sendHomeworkEmail({
-        to: client.email,
-        clientName: client.full_name || "Athlete",
-        trainerName: trainer.full_name || "Your trainer",
-        assignmentTitle: title,
-        dueDate: due_date ? formatDate(due_date) : undefined,
-        homeworkUrl: `${baseUrl}/homework/${assignment.id}`,
-      });
-    } catch (e) {
-      console.error("Failed to send email:", e);
+  const proActive = trainer && isProActive(trainer.subscription_status);
+
+  if (!proActive) {
+    emailError = "Email notifications are a Pro feature";
+  } else if (!process.env.RESEND_API_KEY) {
+    emailError = "RESEND_API_KEY is not configured";
+    console.warn("[assignments] Skipping homework email:", emailError);
+  } else {
+    const { data: client, error: clientError } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", client_id)
+      .maybeSingle();
+
+    if (clientError || !client?.email) {
+      emailError = clientError?.message || "Could not load client email";
+      console.error("[assignments] Homework email skipped:", emailError);
+    } else {
+      try {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        await sendHomeworkEmail({
+          to: client.email,
+          clientName: client.full_name || "Athlete",
+          trainerName: trainer.full_name || "Your trainer",
+          assignmentTitle: title,
+          dueDate: due_date ? formatDate(due_date) : undefined,
+          homeworkUrl: `${baseUrl}/homework/${assignment.id}`,
+        });
+        emailSent = true;
+      } catch (e) {
+        emailError =
+          e instanceof Error ? e.message : "Failed to send homework email";
+        console.error("[assignments] Failed to send email:", emailError);
+      }
     }
   }
 
-  return NextResponse.json(assignment);
+  return NextResponse.json({
+    ...assignment,
+    email_sent: emailSent,
+    email_error: emailError,
+  });
 }

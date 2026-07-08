@@ -77,17 +77,25 @@ export default function NewClipPage() {
         return;
       }
 
-      const { error: dbError } = await supabase.from("clips").insert({
-        trainer_id: user.id,
-        title,
-        description: description || null,
-        storage_path: path,
-        duration_seconds: durationSeconds,
+      const saveRes = await fetch("/api/clips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          storage_path: path,
+          duration_seconds: durationSeconds,
+        }),
       });
+      const saveData = await saveRes.json();
 
-      if (dbError) {
+      if (!saveRes.ok) {
         await supabase.storage.from("clips").remove([path]);
-        setError(dbError.message);
+        setError(
+          saveData.upgrade
+            ? `${saveData.error} Go to Settings to upgrade.`
+            : saveData.error || "Failed to save clip"
+        );
         return;
       }
 

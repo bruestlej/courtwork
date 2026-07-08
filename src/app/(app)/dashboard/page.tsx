@@ -3,6 +3,8 @@ import { requireTrainer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { countTrainerClients } from "@/lib/clients";
 import { getTrainerAssignments } from "@/lib/assignments";
+import { getTrainerUsage } from "@/lib/usage";
+import { UsageMeter } from "@/components/billing/usage-meter";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,8 @@ export default async function DashboardPage() {
   const profile = await requireTrainer();
   const supabase = await createClient();
 
-  const [clips, playlists, clientCount, assignmentResult] = await Promise.all([
+  const [clips, playlists, clientCount, assignmentResult, usage] =
+    await Promise.all([
     supabase
       .from("clips")
       .select("id", { count: "exact", head: true })
@@ -24,6 +27,7 @@ export default async function DashboardPage() {
       .eq("trainer_id", profile.id),
     countTrainerClients(profile.id),
     getTrainerAssignments(profile.id, 5),
+    getTrainerUsage(profile.id, profile.subscription_status),
   ]);
 
   const assignments = assignmentResult.assignments;
@@ -40,7 +44,9 @@ export default async function DashboardPage() {
         title={`Hey, ${profile.full_name?.split(" ")[0] || "Coach"}!`}
         subtitle="Your training dashboard"
       />
-      <div className="mx-auto max-w-lg space-y-6 px-4 py-4">
+      <div className="mx-auto max-w-lg space-y-6 px-4 py-4 pb-8">
+        <UsageMeter usage={usage} />
+
         <div className="grid grid-cols-3 gap-3">
           {stats.map(({ label, count, href, icon: Icon }) => (
             <Link key={label} href={href}>

@@ -100,11 +100,21 @@ export default function LandingPage() {
           ))}
         </section>
 
+        <section className="mb-8 rounded-2xl border border-stone-200 bg-white p-6">
+          <h2 className="text-lg font-bold text-stone-900">Free to start</h2>
+          <p className="mt-2 text-sm text-stone-600">
+            3 clients · 10 clips · 3 playlists · homework & progress tracking
+          </p>
+          <Link href="/signup" className="mt-4 inline-block">
+            <Button variant="outline">Create free account</Button>
+          </Link>
+        </section>
+
         <section className="mb-16 rounded-2xl bg-orange-600 p-6 text-center text-white">
           <h2 className="text-xl font-bold">Pro Plan — $29/mo</h2>
           <p className="mt-2 text-sm text-orange-100">
-            Unlimited clients, clips, and playlists. Email notifications
-            included.
+            Unlimited clients, clips, and playlists. Email notifications when
+            homework is assigned.
           </p>
           <Link href="/signup" className="mt-4 inline-block">
             <Button

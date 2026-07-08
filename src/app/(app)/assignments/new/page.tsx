@@ -25,6 +25,7 @@ export default async function NewAssignmentPage() {
     <AssignHomeworkPage
       playlists={playlists as Playlist[]}
       clients={clientsResult.clients}
+      isPro={profile.subscription_status === "active"}
     />
   );
 }

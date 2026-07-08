@@ -7,58 +7,53 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, CreditCard, Loader2 } from "lucide-react";
+import { LogOut, CreditCard, Loader2, ExternalLink } from "lucide-react";
 import type { Profile } from "@/types/database";
 import { PLANS } from "@/lib/stripe";
+import { PLAN_COPY } from "@/lib/plans";
 
 export default function SettingsPage({ profile }: { profile: Profile }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(
     profile.subscription_status
   );
   const [syncMessage, setSyncMessage] = useState("");
 
-  useEffect(() => {
-    if (searchParams.get("upgraded") !== "true") return;
-
-    let cancelled = false;
-
-    async function syncAfterUpgrade() {
-      setSyncing(true);
-      setSyncMessage("Confirming your Pro subscription…");
-
-      try {
-        const res = await fetch("/api/stripe/sync", { method: "POST" });
-        const data = await res.json();
-        if (cancelled) return;
-
-        if (data.status === "active") {
-          setSubscriptionStatus("active");
-          setSyncMessage("Pro plan is now active.");
-        } else {
-          setSyncMessage(
-            "Payment received, but Pro status isn’t active yet. Wait a few seconds and refresh, or ensure stripe listen is running."
-          );
-        }
-        router.replace("/settings");
-        router.refresh();
-      } catch {
-        if (!cancelled) {
-          setSyncMessage("Could not confirm subscription. Try refreshing.");
-        }
-      } finally {
-        if (!cancelled) setSyncing(false);
+  async function syncSubscription(message?: string) {
+    setSyncing(true);
+    if (message) setSyncMessage(message);
+    try {
+      const res = await fetch("/api/stripe/sync", { method: "POST" });
+      const data = await res.json();
+      const status = data.status || "free";
+      setSubscriptionStatus(status);
+      if (status === "active") {
+        setSyncMessage("Pro plan is active.");
+      } else if (!message) {
+        setSyncMessage("You're on the Free plan.");
       }
+      router.refresh();
+    } catch {
+      setSyncMessage("Could not refresh subscription status.");
+    } finally {
+      setSyncing(false);
     }
+  }
 
-    syncAfterUpgrade();
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams, router]);
+  useEffect(() => {
+    if (searchParams.get("upgraded") === "true") {
+      syncSubscription("Confirming your Pro subscription…");
+      router.replace("/settings");
+    } else if (searchParams.get("billing") === "return") {
+      syncSubscription("Updating your subscription…");
+      router.replace("/settings");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -79,31 +74,25 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
     setLoading(false);
   }
 
-  async function handleRefreshStatus() {
-    setSyncing(true);
+  async function handleManageBilling() {
+    setPortalLoading(true);
     setSyncMessage("");
-    try {
-      const res = await fetch("/api/stripe/sync", { method: "POST" });
-      const data = await res.json();
-      if (data.status === "active") {
-        setSubscriptionStatus("active");
-        setSyncMessage("Pro plan is now active.");
-      } else {
-        setSubscriptionStatus(data.status || "free");
-        setSyncMessage("Still on Free — no active Stripe subscription found.");
-      }
-      router.refresh();
-    } catch {
-      setSyncMessage("Could not refresh status.");
-    } finally {
-      setSyncing(false);
+    const res = await fetch("/api/stripe/portal", { method: "POST" });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+      return;
     }
+    setSyncMessage(data.error || "Could not open billing portal");
+    setPortalLoading(false);
   }
+
+  const isPro = subscriptionStatus === "active";
 
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
+      <div className="mx-auto max-w-lg space-y-4 px-4 py-4 pb-8">
         <Card>
           <CardTitle className="text-sm">Account</CardTitle>
           <CardDescription className="mt-1">
@@ -119,16 +108,27 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
           <Card>
             <CardTitle className="text-sm">Subscription</CardTitle>
             <CardDescription className="mt-1">
-              {subscriptionStatus === "active"
-                ? "Pro plan active"
-                : "Free plan"}
+              {isPro ? "Pro plan active" : "Free plan"}
             </CardDescription>
             {syncMessage && (
               <p className="mt-2 text-xs text-stone-600">{syncMessage}</p>
             )}
-            {subscriptionStatus !== "active" && (
+            {!isPro && (
               <>
+                <p className="mt-2 text-xs text-stone-500">
+                  {PLAN_COPY.free.summary}
+                </p>
                 <ul className="mt-3 space-y-1">
+                  {PLANS.free.features.map((f) => (
+                    <li key={f} className="text-xs text-stone-600">
+                      • {f}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs font-medium text-stone-700">
+                  Pro includes:
+                </p>
+                <ul className="mt-1 space-y-1">
                   {PLANS.pro.features.map((f) => (
                     <li key={f} className="text-xs text-stone-600">
                       ✓ {f}
@@ -138,7 +138,7 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
                 <Button
                   className="mt-3 w-full"
                   onClick={handleUpgrade}
-                  disabled={loading || syncing}
+                  disabled={loading || syncing || portalLoading}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -150,11 +150,27 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
                 </Button>
               </>
             )}
+            {isPro && (
+              <Button
+                variant="outline"
+                className="mt-3 w-full"
+                onClick={handleManageBilling}
+                disabled={portalLoading || syncing}
+              >
+                {portalLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <ExternalLink className="h-4 w-4" /> Manage subscription
+                  </>
+                )}
+              </Button>
+            )}
             <Button
               variant="outline"
               className="mt-2 w-full"
-              onClick={handleRefreshStatus}
-              disabled={syncing}
+              onClick={() => syncSubscription()}
+              disabled={syncing || portalLoading}
             >
               {syncing ? (
                 <>
@@ -167,11 +183,7 @@ export default function SettingsPage({ profile }: { profile: Profile }) {
           </Card>
         )}
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={handleSignOut}
-        >
+        <Button variant="outline" className="w-full" onClick={handleSignOut}>
           <LogOut className="h-4 w-4" /> Sign Out
         </Button>
       </div>

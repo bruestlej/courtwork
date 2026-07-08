@@ -31,10 +31,13 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+    request.nextUrl.pathname.startsWith("/signup") ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/reset-password");
   const isPublicPage =
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/auth/callback") ||
+    request.nextUrl.pathname.startsWith("/auth/confirm") ||
     request.nextUrl.pathname.startsWith("/api/stripe/webhook");
 
   if (!user && !isAuthPage && !isPublicPage) {
@@ -46,9 +49,17 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const role = user.user_metadata?.role;
     const homePath = role === "client" ? "/homework" : "/dashboard";
+    const isForgotPassword = request.nextUrl.pathname.startsWith("/forgot-password");
+    const isResetPassword = request.nextUrl.pathname.startsWith("/reset-password");
 
-    // Logged-in users should never stay on auth pages or the role switchboard
-    if (isAuthPage || request.nextUrl.pathname === "/home") {
+    // Allow password reset while authenticated from email link
+    if (isAuthPage && !isResetPassword && !isForgotPassword) {
+      const url = request.nextUrl.clone();
+      url.pathname = homePath;
+      return NextResponse.redirect(url);
+    }
+
+    if (request.nextUrl.pathname === "/home") {
       const url = request.nextUrl.clone();
       url.pathname = homePath;
       return NextResponse.redirect(url);

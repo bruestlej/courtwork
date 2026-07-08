@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -12,9 +11,11 @@ import type { Playlist, Profile } from "@/types/database";
 export default function AssignHomeworkPage({
   playlists,
   clients,
+  isPro,
 }: {
   playlists: Playlist[];
   clients: Profile[];
+  isPro: boolean;
 }) {
   const router = useRouter();
   const [playlistId, setPlaylistId] = useState(playlists[0]?.id ?? "");
@@ -42,10 +43,25 @@ export default function AssignHomeworkPage({
       }),
     });
 
+    const data = await res.json();
+
     if (!res.ok) {
-      const data = await res.json();
       setError(data.error || "Failed to assign homework");
       setLoading(false);
+      return;
+    }
+
+    if (data.email_sent === false) {
+      const detail = data.email_error
+        ? ` Homework was saved, but the email failed: ${data.email_error}`
+        : " Homework was saved, but the notification email was not sent.";
+      setError(detail);
+      setLoading(false);
+      // Still navigate so the assignment is visible; keep a short delay for the message.
+      setTimeout(() => {
+        router.push("/assignments");
+        router.refresh();
+      }, 2500);
       return;
     }
 
@@ -56,7 +72,13 @@ export default function AssignHomeworkPage({
   return (
     <>
       <PageHeader title="Assign Homework" backHref="/assignments" />
-      <div className="mx-auto max-w-lg px-4 py-4">
+      <div className="mx-auto max-w-lg px-4 py-4 pb-8">
+        {!isPro && (
+          <p className="mb-4 rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-600">
+            Homework will be assigned in the app. Email notifications require
+            Pro (and Resend setup).
+          </p>
+        )}
         <form onSubmit={handleAssign} className="space-y-4">
           <div className="space-y-2">
             <Label>Playlist</Label>

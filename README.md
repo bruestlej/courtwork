@@ -59,7 +59,7 @@ cp .env.example .env.local
 ### 4. Set up PostHog & Resend (optional)
 
 - PostHog: Create a project and add `NEXT_PUBLIC_POSTHOG_KEY`
-- Resend: Verify your domain and add `RESEND_API_KEY`
+- Resend: Add `RESEND_API_KEY`. For local/dev use `CourtWork <onboarding@resend.dev>` (only delivers to your Resend account email). For production, verify a domain and set `RESEND_FROM_EMAIL`.
 
 ### 5. Run locally
 

@@ -112,22 +112,23 @@ export function PlaylistBuilder({
 
       await supabase.from("playlist_items").delete().eq("playlist_id", id);
     } else {
-      const { data, error: createError } = await supabase
-        .from("playlists")
-        .insert({
-          trainer_id: user.id,
-          title,
-          description: description || null,
-        })
-        .select("id")
-        .single();
+      const createRes = await fetch("/api/playlists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description }),
+      });
+      const createData = await createRes.json();
 
-      if (createError || !data) {
-        setError(createError?.message || "Failed to create playlist");
+      if (!createRes.ok) {
+        setError(
+          createData.upgrade
+            ? `${createData.error} Go to Settings to upgrade.`
+            : createData.error || "Failed to create playlist"
+        );
         setLoading(false);
         return;
       }
-      id = data.id;
+      id = createData.id;
     }
 
     const items = playlistClips.map((clip, index) => ({
@@ -202,7 +203,7 @@ export function PlaylistBuilder({
         ) : (
           <Card className="border-dashed py-8 text-center">
             <p className="text-sm text-stone-500">
-              Drag clips here or tap + Add below
+              Tap + Add below to add clips, then drag by the grip to reorder
             </p>
           </Card>
         )}

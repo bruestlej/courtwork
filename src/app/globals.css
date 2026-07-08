@@ -22,9 +22,17 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* Smooth touch scrolling on mobile */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
 }
 
 /* Custom scrollbar for clip library */
