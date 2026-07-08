@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Upload, Loader2 } from "lucide-react";
+import { getVideoDuration } from "@/lib/video";
 
 export default function NewClipPage() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -44,6 +45,8 @@ export default function NewClipPage() {
         return;
       }
 
+      const durationSeconds = await getVideoDuration(file);
+
       const ext = file.name.split(".").pop() || "mp4";
       const path = `${user.id}/${Date.now()}.${ext}`;
 
@@ -79,6 +82,7 @@ export default function NewClipPage() {
         title,
         description: description || null,
         storage_path: path,
+        duration_seconds: durationSeconds,
       });
 
       if (dbError) {
