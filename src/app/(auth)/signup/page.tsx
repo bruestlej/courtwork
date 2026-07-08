@@ -36,7 +36,7 @@ export default function SignupPage() {
       return;
     }
 
-    window.location.href = "/home";
+    window.location.href = role === "client" ? "/homework" : "/dashboard";
   }
 
   return (

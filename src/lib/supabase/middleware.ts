@@ -42,11 +42,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
-    const url = request.nextUrl.clone();
+  if (user) {
     const role = user.user_metadata?.role;
-    url.pathname = role === "client" ? "/homework" : "/dashboard";
-    return NextResponse.redirect(url);
+    const homePath = role === "client" ? "/homework" : "/dashboard";
+
+    // Logged-in users should never stay on auth pages or the role switchboard
+    if (isAuthPage || request.nextUrl.pathname === "/home") {
+      const url = request.nextUrl.clone();
+      url.pathname = homePath;
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;
