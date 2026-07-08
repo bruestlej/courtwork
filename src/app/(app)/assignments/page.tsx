@@ -5,12 +5,14 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorBanner } from "@/components/ui/feedback";
 import { Plus, ClipboardList } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export default async function AssignmentsPage() {
   const profile = await requireTrainer();
-  const assignments = await getTrainerAssignments(profile.id);
+  const { assignments, error } = await getTrainerAssignments(profile.id);
 
   return (
     <>
@@ -26,6 +28,7 @@ export default async function AssignmentsPage() {
         }
       />
       <div className="mx-auto max-w-lg px-4 py-4">
+        {error && <ErrorBanner message={error} />}
         {assignments.length > 0 ? (
           <div className="space-y-2">
             {assignments.map((a) => {
@@ -59,15 +62,15 @@ export default async function AssignmentsPage() {
             })}
           </div>
         ) : (
-          <Card className="py-12 text-center">
-            <ClipboardList className="mx-auto h-10 w-10 text-stone-300" />
-            <p className="mt-3 text-sm text-stone-500">No assignments yet</p>
-            <Link href="/assignments/new">
-              <Button size="sm" className="mt-3">
-                Assign homework
-              </Button>
-            </Link>
-          </Card>
+          !error && (
+            <EmptyState
+              icon={ClipboardList}
+              title="No assignments yet"
+              description="Build a playlist, then assign it to a client as homework."
+              actionHref="/assignments/new"
+              actionLabel="Assign homework"
+            />
+          )
         )}
       </div>
     </>

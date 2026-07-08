@@ -4,12 +4,14 @@ import { getClientAssignments } from "@/lib/assignments";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorBanner } from "@/components/ui/feedback";
 import { ClipboardList } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export default async function HomeworkPage() {
   const profile = await requireClient();
-  const assignments = await getClientAssignments(profile.id);
+  const { assignments, error } = await getClientAssignments(profile.id);
 
   return (
     <>
@@ -18,6 +20,7 @@ export default async function HomeworkPage() {
         subtitle={`Hey ${profile.full_name?.split(" ")[0] || "there"}!`}
       />
       <div className="mx-auto max-w-lg px-4 py-4">
+        {error && <ErrorBanner message={error} />}
         {assignments.length > 0 ? (
           <div className="space-y-2">
             {assignments.map((a) => {
@@ -59,15 +62,13 @@ export default async function HomeworkPage() {
             })}
           </div>
         ) : (
-          <Card className="py-12 text-center">
-            <ClipboardList className="mx-auto h-10 w-10 text-stone-300" />
-            <p className="mt-3 text-sm text-stone-500">
-              No homework assigned yet
-            </p>
-            <p className="mt-1 text-xs text-stone-400">
-              Your trainer will send you workouts here
-            </p>
-          </Card>
+          !error && (
+            <EmptyState
+              icon={ClipboardList}
+              title="No homework assigned yet"
+              description="Your trainer will send you workouts here. Pull to refresh after they assign something."
+            />
+          )
         )}
       </div>
     </>

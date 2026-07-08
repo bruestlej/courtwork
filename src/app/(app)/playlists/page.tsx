@@ -4,13 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorBanner } from "@/components/ui/feedback";
 import { Plus, ListMusic } from "lucide-react";
 
 export default async function PlaylistsPage() {
   const profile = await requireTrainer();
   const supabase = await createClient();
 
-  const { data: playlists } = await supabase
+  const { data: playlists, error } = await supabase
     .from("playlists")
     .select("*, playlist_items(count)")
     .eq("trainer_id", profile.id)
@@ -30,6 +32,7 @@ export default async function PlaylistsPage() {
         }
       />
       <div className="mx-auto max-w-lg px-4 py-4">
+        {error && <ErrorBanner message={error.message} />}
         {playlists && playlists.length > 0 ? (
           <div className="space-y-2">
             {playlists.map((playlist) => (
@@ -57,15 +60,15 @@ export default async function PlaylistsPage() {
             ))}
           </div>
         ) : (
-          <Card className="py-12 text-center">
-            <ListMusic className="mx-auto h-10 w-10 text-stone-300" />
-            <p className="mt-3 text-sm text-stone-500">No playlists yet</p>
-            <Link href="/playlists/new">
-              <Button size="sm" className="mt-3">
-                Build your first playlist
-              </Button>
-            </Link>
-          </Card>
+          !error && (
+            <EmptyState
+              icon={ListMusic}
+              title="No playlists yet"
+              description="Combine clips into an ordered homework sequence for your athletes."
+              actionHref="/playlists/new"
+              actionLabel="Build your first playlist"
+            />
+          )
         )}
       </div>
     </>

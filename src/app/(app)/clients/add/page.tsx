@@ -48,9 +48,9 @@ export default function AddClientPage() {
       <div className="mx-auto max-w-lg px-4 py-4">
         <Card className="mb-4 bg-orange-50 border-orange-200">
           <p className="text-sm text-orange-800">
-            Your client must create an account with the &quot;client&quot; role
-            first. Then enter their email here to link them. Use your trainer
-            browser for this step — not the client (incognito) session.
+            Your athlete must sign up as a <strong>Client</strong> first (and
+            confirm email if required). Then enter their exact email here. Use
+            your trainer browser for this step — not the client session.
           </p>
         </Card>
         <form onSubmit={handleAdd} className="space-y-4">

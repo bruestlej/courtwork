@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const profile = await requireTrainer();
   const supabase = await createClient();
 
-  const [clips, playlists, clientCount, assignments] = await Promise.all([
+  const [clips, playlists, clientCount, assignmentResult] = await Promise.all([
     supabase
       .from("clips")
       .select("id", { count: "exact", head: true })
@@ -25,6 +25,8 @@ export default async function DashboardPage() {
     countTrainerClients(profile.id),
     getTrainerAssignments(profile.id, 5),
   ]);
+
+  const assignments = assignmentResult.assignments;
 
   const stats = [
     { label: "Clips", count: clips.count ?? 0, href: "/clips", icon: Video },

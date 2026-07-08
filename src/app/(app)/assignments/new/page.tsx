@@ -9,7 +9,7 @@ export default async function NewAssignmentPage() {
   const profile = await requireTrainer();
   const supabase = await createClient();
 
-  const [{ data: playlists }, clients] = await Promise.all([
+  const [{ data: playlists }, clientsResult] = await Promise.all([
     supabase
       .from("playlists")
       .select("*")
@@ -19,12 +19,12 @@ export default async function NewAssignmentPage() {
   ]);
 
   if (!playlists?.length) redirect("/playlists/new");
-  if (!clients.length) redirect("/clients/add");
+  if (!clientsResult.clients.length) redirect("/clients/add");
 
   return (
     <AssignHomeworkPage
       playlists={playlists as Playlist[]}
-      clients={clients}
+      clients={clientsResult.clients}
     />
   );
 }

@@ -36,10 +36,16 @@ cp .env.example .env.local
 ### 2. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run the migration in `supabase/migrations/001_initial_schema.sql` via the SQL editor
+2. Run migrations in order via the SQL editor:
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_storage_clips.sql`
+   - `supabase/migrations/003_harden_rls.sql`
 3. Create a Storage bucket named `clips` (private)
-4. Apply the storage policies from the bottom of the migration file
-5. Copy your project URL and keys to `.env.local`
+4. Apply the storage policies from `002_storage_clips.sql`
+5. In **Authentication → URL Configuration**, set:
+   - Site URL: your app URL (`http://localhost:3000` locally, production URL in prod)
+   - Redirect URLs: `{APP_URL}/auth/callback`
+6. Copy your project URL and keys to `.env.local`
 
 ### 3. Set up Stripe
 
